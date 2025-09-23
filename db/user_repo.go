@@ -2,7 +2,7 @@ package db
 
 import (
 	"context"
-	"errors"
+	"rest_api/functions"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -32,7 +32,7 @@ func (r *UserRepository) NewUser(pgx *pgxpool.Pool, name string, email string) e
 	}
 
 	if tag.RowsAffected() == 0 {
-		return errors.New("failed to create a new user")
+		return functions.ErrUserAlreadyCreated
 
 	}
 
@@ -51,5 +51,3 @@ func (r *UserRepository) GetUserByID(pool *pgxpool.Pool, id int) (User, error) {
 
 	return u, nil
 }
-
-
