@@ -7,20 +7,26 @@ import (
 )
 
 type Seats struct {
-	Id     int
-	Number int
-	Row    int
+	Id     int `json:"id_seat"`
+	Number int `json:"number"`
+	Row    int `json:"row"`
 
-	Is_reserved bool
+	Is_reserved bool `json:"is_reserved"`
 }
 
 type SeatsRepository struct {
 	pool *pgxpool.Pool
 }
 
-func (r *SeatsRepository) GetAllSeats() ([]Seats, error) {
+func NewSeatRepository(pool *pgxpool.Pool) *SeatsRepository {
+	return &SeatsRepository{
+		pool: pool,
+	}
+}
+
+func (r *SeatsRepository) GetAllSeats(ctx context.Context) ([]Seats, error) {
 	var s Seats
-	rows, err := r.pool.Query(context.Background(),
+	rows, err := r.pool.Query(ctx,
 		"SELECT id, number, row, is_reserved FROM seats ")
 	if err != nil {
 		return []Seats{}, err
@@ -42,9 +48,9 @@ func (r *SeatsRepository) GetAllSeats() ([]Seats, error) {
 	return seats, nil
 }
 
-func (r *SeatsRepository) GetFreeSeats() ([]Seats, error) {
+func (r *SeatsRepository) GetFreeSeats(ctx context.Context) ([]Seats, error) {
 	var s Seats
-	rows, err := r.pool.Query(context.Background(),
+	rows, err := r.pool.Query(ctx,
 		"SELECT id, number, row, is_reserved FROM seats WHERE is_reserved=$1", false)
 	if err != nil {
 		return []Seats{}, err
@@ -67,8 +73,8 @@ func (r *SeatsRepository) GetFreeSeats() ([]Seats, error) {
 
 }
 
-func (r *SeatsRepository) GetReservedSeats() ([]Seats, error) {
-	rows, err := r.pool.Query(context.Background(),
+func (r *SeatsRepository) GetReservedSeats(ctx context.Context) ([]Seats, error) {
+	rows, err := r.pool.Query(ctx,
 		"SELECT id, number, row, is_reserved FROM seats WHERE is_reserved=$1", true)
 	if err != nil {
 		return nil, err

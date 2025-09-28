@@ -15,7 +15,5 @@ func ConnectionDB() (*pgxpool.Pool, error) {
 		log.Fatal(err)
 	}
 
-	defer pool.Close()
-
 	return pool, nil
 }

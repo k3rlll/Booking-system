@@ -3,14 +3,15 @@ package db
 import (
 	"context"
 	"rest_api/functions"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type User struct {
-	id    int
-	name  string
-	email string
+	Id    int    `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
 }
 
 type UserRepository struct {
@@ -23,9 +24,16 @@ func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
 	}
 }
 
-func (r *UserRepository) NewUser(pgx *pgxpool.Pool, name string, email string) error {
+func (r *UserRepository) NewUser(ctx context.Context, name string, email string) error {
 
-	tag, err := r.pool.Exec(context.Background(),
+	if name == "" {
+		return functions.ErrBadRequest
+	}
+	if !strings.Contains(email, "@") {
+		return functions.ErrBadRequest
+	}
+
+	tag, err := r.pool.Exec(ctx,
 		"INSERT INTO users (name, email) VALUES ($1, $2)", name, email)
 	if err != nil {
 		return err
@@ -39,15 +47,30 @@ func (r *UserRepository) NewUser(pgx *pgxpool.Pool, name string, email string) e
 	return nil
 }
 
-func (r *UserRepository) GetUserByID(pool *pgxpool.Pool, id int) (User, error) {
+func (r *UserRepository) GetUserByID(ctx context.Context, id int) (User, error) {
 
 	var u User
 
-	err := r.pool.QueryRow(context.Background(),
-		"SELECT id, name, email FROM users WHERE id=$1", id).Scan(&u.name, &u.email)
+	if id == 0 {
+		return User{}, functions.ErrBadRequest
+	}
+
+	err := r.pool.QueryRow(ctx,
+		"SELECT id, name, email FROM users WHERE id=$1", id).Scan(&u.Name, &u.Email)
 	if err != nil {
 		return User{}, err
 	}
 
 	return u, nil
+}
+
+func (r *UserRepository) GetUserID(ctx context.Context, email string) (int, error) {
+	var ID int
+	err := r.pool.QueryRow(ctx,
+		"select id from users where email=$1", email).Scan(&ID)
+	if err != nil {
+		return 0, err
+	}
+	return ID, nil
+
 }
