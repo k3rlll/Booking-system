@@ -10,10 +10,19 @@ import (
 	"time"
 )
 
+// HTTPHandlers
 type Http struct {
 	User        *db.UserRepository
 	Seats       *db.SeatsRepository
 	Reservation *db.ReservationRepository
+}
+
+func NewHttp(user *db.UserRepository, seats *db.SeatsRepository, reservation *db.ReservationRepository) *Http {
+	return &Http{
+		User:        user,
+		Seats:       seats,
+		Reservation: reservation,
+	}
 }
 
 /*
@@ -30,7 +39,7 @@ failed:
   - response body: JSON with error + time
 */
 
-func (h *Http) NewUser(w http.ResponseWriter, r http.Request) {
+func (h *Http) HandlerNewUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var u db.User
@@ -92,7 +101,7 @@ failed:
   - response body: JSON with error + time
 */
 
-func (h *Http) GetUserByID(w http.ResponseWriter, r http.Request) {
+func (h *Http) HandlerGetUserByID(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var u db.User
@@ -142,7 +151,7 @@ failed:
   - response body: JSON with error + time
 */
 
-func (h *Http) GetAllSeats(w http.ResponseWriter, r http.Request) {
+func (h *Http) HandlerGetAllSeats(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	res, err := h.Seats.GetAllSeats(ctx)
@@ -180,7 +189,7 @@ failed:
   - response body: JSON with error + time
 */
 
-func (h *Http) GetFreeSeats(w http.ResponseWriter, r http.Request) {
+func (h *Http) HandlerGetFreeSeats(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	res, err := h.Seats.GetFreeSeats(ctx)
@@ -218,7 +227,7 @@ failed:
   - response body: JSON with error + time
 */
 
-func (h *Http) GetReservedSeats(w http.ResponseWriter, r http.Request) {
+func (h *Http) HandlerGetReservedSeats(w http.ResponseWriter, r http.Request) {
 	ctx := r.Context()
 
 	res, err := h.Seats.GetReservedSeats(ctx)
@@ -256,7 +265,7 @@ failed:
   - response body: JSON with error + time
 */
 
-func (h *Http) IsReserved(w http.ResponseWriter, r http.Request) {
+func (h *Http) HandlerIsReserved(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var IdSeat int
@@ -300,7 +309,7 @@ failed:
   - response body: JSON with error + time
 */
 
-func (h *Http) Reserve(w http.ResponseWriter, r *http.Request) {
+func (h *Http) HandlerReserve(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var res db.Reserve
@@ -313,7 +322,17 @@ func (h *Http) Reserve(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errDTO.ToString(), http.StatusBadRequest)
 	}
 
-	h.Reservation.Reserve(ctx)
+	if err := h.Reservation.Reserve(ctx, res.UserId.Id, res.SeatId.Id); err != nil {
+		errDTO := functions.ErrDTO{
+			Error: err,
+			Time:  time.Now(),
+		}
+		if errors.Is(err, functions.ErrReservationAlreadyExist) {
+			http.Error(w, errDTO.ToString(), http.StatusConflict)
+		} else {
+			http.Error(w, errDTO.ToString(), http.StatusBadRequest)
+		}
+	}
 }
 
 /*
@@ -329,7 +348,28 @@ failed:
   - status code:   400, 404, 500, ...
   - response body: JSON with error + time
 */
+func (h *Http) HandlerDeleteReservation(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 
-func (h *Http) DeleteReservation(w http.ResponseWriter, r *http.Request) {
+	var res db.Reserve
 
+	if err := json.NewDecoder(r.Body).Decode(&res); err != nil {
+		errDTO := functions.ErrDTO{
+			Error: err,
+			Time:  time.Now(),
+		}
+		http.Error(w, errDTO.ToString(), http.StatusBadRequest)
+	}
+
+	if err := h.Reservation.DeleteReservation(ctx, res.UserId.Id, res.SeatId.Id); err != nil {
+		errDTO := functions.ErrDTO{
+			Error: err,
+			Time:  time.Now(),
+		}
+		if errors.Is(err, functions.ErrReservationNotFound) {
+			http.Error(w, errDTO.ToString(), http.StatusNotFound)
+		} else {
+			http.Error(w, errDTO.ToString(), http.StatusBadRequest)
+		}
+	}
 }
