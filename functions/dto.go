@@ -6,7 +6,7 @@ import (
 )
 
 type ErrDTO struct {
-	Error error     `json:"error"`
+	Error string    `json:"error"`
 	Time  time.Time `json:"time"`
 }
 

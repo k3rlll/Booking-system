@@ -47,24 +47,28 @@ func (h *Http) HandlerNewUser(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
 		errDTO := functions.ErrDTO{
-			Error: err,
+			Error: err.Error(),
 			Time:  time.Now()}
 		http.Error(w, errDTO.ToString(), http.StatusBadRequest)
+		return
 	}
 
 	u_res, err := h.User.NewUser(ctx, u.Name, u.Email)
 	if err != nil {
 		errDTO := functions.ErrDTO{
-			Error: err,
+			Error: err.Error(),
 			Time:  time.Now(),
 		}
 		switch {
 		case errors.Is(err, functions.ErrUserAlreadyCreated):
 			http.Error(w, errDTO.ToString(), http.StatusConflict)
+			return
 		case errors.Is(err, functions.ErrBadRequest):
 			http.Error(w, errDTO.ToString(), http.StatusBadRequest)
+			return
 		default:
 			http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
+			return
 		}
 	}
 
@@ -110,22 +114,25 @@ func (h *Http) HandlerGetUserByID(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
 		errDTO := functions.ErrDTO{
-			Error: err,
+			Error: err.Error(),
 			Time:  time.Now(),
 		}
 		http.Error(w, errDTO.ToString(), http.StatusBadRequest)
+		return
 	}
 
 	res, err := h.User.GetUserByID(ctx, u.Id)
 	if err != nil {
 		errDTO := functions.ErrDTO{
-			Error: err,
+			Error: err.Error(),
 			Time:  time.Now(),
 		}
 		if err == functions.ErrBadRequest {
 			http.Error(w, errDTO.ToString(), http.StatusBadRequest)
+			return
 		} else {
 			http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
+			return
 		}
 	}
 
@@ -159,7 +166,7 @@ func (h *Http) HandlerGetAllSeats(w http.ResponseWriter, r *http.Request) {
 	res, err := h.Seats.GetAllSeats(ctx)
 	if err != nil {
 		errDTO := functions.ErrDTO{
-			Error: err,
+			Error: err.Error(),
 			Time:  time.Now(),
 		}
 		http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
@@ -167,7 +174,7 @@ func (h *Http) HandlerGetAllSeats(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewEncoder(w).Encode(res); err != nil {
 		errDTO := functions.ErrDTO{
-			Error: err,
+			Error: err.Error(),
 			Time:  time.Now(),
 		}
 		http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
@@ -197,7 +204,7 @@ func (h *Http) HandlerGetFreeSeats(w http.ResponseWriter, r *http.Request) {
 	res, err := h.Seats.GetFreeSeats(ctx)
 	if err != nil {
 		errDTO := functions.ErrDTO{
-			Error: err,
+			Error: err.Error(),
 			Time:  time.Now(),
 		}
 		http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
@@ -205,7 +212,7 @@ func (h *Http) HandlerGetFreeSeats(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewEncoder(w).Encode(res); err != nil {
 		errDTO := functions.ErrDTO{
-			Error: err,
+			Error: err.Error(),
 			Time:  time.Now(),
 		}
 		http.Error(w, errDTO.ToString(), http.StatusBadRequest)
@@ -235,7 +242,7 @@ func (h *Http) HandlerGetReservedSeats(w http.ResponseWriter, r http.Request) {
 	res, err := h.Seats.GetReservedSeats(ctx)
 	if err != nil {
 		errDTO := functions.ErrDTO{
-			Error: err,
+			Error: err.Error(),
 			Time:  time.Now(),
 		}
 		http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
@@ -243,7 +250,7 @@ func (h *Http) HandlerGetReservedSeats(w http.ResponseWriter, r http.Request) {
 
 	if err := json.NewEncoder(w).Encode(res); err != nil {
 		errDTO := functions.ErrDTO{
-			Error: err,
+			Error: err.Error(),
 			Time:  time.Now(),
 		}
 		http.Error(w, errDTO.ToString(), http.StatusBadRequest)
@@ -274,7 +281,7 @@ func (h *Http) HandlerIsReserved(w http.ResponseWriter, r *http.Request) {
 	var res bool
 	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
 		errDTO := functions.ErrDTO{
-			Error: err,
+			Error: err.Error(),
 			Time:  time.Now(),
 		}
 		http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
@@ -288,7 +295,7 @@ func (h *Http) HandlerIsReserved(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewEncoder(w).Encode(res); err != nil {
 		errDTO := functions.ErrDTO{
-			Error: err,
+			Error: err.Error(),
 			Time:  time.Now(),
 		}
 		http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
@@ -318,7 +325,7 @@ func (h *Http) HandlerReserve(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewDecoder(r.Body).Decode(&res); err != nil {
 		errDTO := functions.ErrDTO{
-			Error: err,
+			Error: err.Error(),
 			Time:  time.Now(),
 		}
 		http.Error(w, errDTO.ToString(), http.StatusBadRequest)
@@ -327,7 +334,7 @@ func (h *Http) HandlerReserve(w http.ResponseWriter, r *http.Request) {
 	result, err := h.Reservation.Reserve(ctx, res.UserId.Id, res.SeatRow.Row, res.SeatRow.Number)
 	if err != nil {
 		errDTO := functions.ErrDTO{
-			Error: err,
+			Error: err.Error(),
 			Time:  time.Now(),
 		}
 		if errors.Is(err, functions.ErrReservationAlreadyExist) {
@@ -367,7 +374,7 @@ func (h *Http) HandlerDeleteReservation(w http.ResponseWriter, r *http.Request) 
 
 	if err := json.NewDecoder(r.Body).Decode(&res); err != nil {
 		errDTO := functions.ErrDTO{
-			Error: err,
+			Error: err.Error(),
 			Time:  time.Now(),
 		}
 		http.Error(w, errDTO.ToString(), http.StatusBadRequest)
@@ -375,7 +382,7 @@ func (h *Http) HandlerDeleteReservation(w http.ResponseWriter, r *http.Request) 
 
 	if err := h.Reservation.DeleteReservation(ctx, res.UserId.Id, res.SeatRow.Row, res.SeatRow.Number); err != nil {
 		errDTO := functions.ErrDTO{
-			Error: err,
+			Error: err.Error(),
 			Time:  time.Now(),
 		}
 		if errors.Is(err, functions.ErrReservationNotFound) {
