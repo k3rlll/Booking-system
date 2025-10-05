@@ -7,7 +7,6 @@ import (
 )
 
 type Seats struct {
-	Id     int `json:"id_seat"`
 	Number int `json:"number"`
 	Row    int `json:"row"`
 
@@ -27,7 +26,7 @@ func NewSeatRepository(pool *pgxpool.Pool) *SeatsRepository {
 func (r *SeatsRepository) GetAllSeats(ctx context.Context) ([]Seats, error) {
 	var s Seats
 	rows, err := r.pool.Query(ctx,
-		"SELECT id, number, row, is_reserved FROM seats ")
+		"SELECT number, row, is_reserved FROM seats ")
 	if err != nil {
 		return []Seats{}, err
 	}
@@ -37,7 +36,7 @@ func (r *SeatsRepository) GetAllSeats(ctx context.Context) ([]Seats, error) {
 	var seats []Seats
 
 	for rows.Next() {
-		err = rows.Scan(&s.Id, &s.Number, &s.Row, &s.Is_reserved)
+		err = rows.Scan(&s.Number, &s.Row, &s.Is_reserved)
 		if err != nil {
 			return []Seats{}, err
 		}
@@ -51,7 +50,7 @@ func (r *SeatsRepository) GetAllSeats(ctx context.Context) ([]Seats, error) {
 func (r *SeatsRepository) GetFreeSeats(ctx context.Context) ([]Seats, error) {
 	var s Seats
 	rows, err := r.pool.Query(ctx,
-		"SELECT id, number, row, is_reserved FROM seats WHERE is_reserved=$1", false)
+		"SELECT number, row, is_reserved FROM seats WHERE is_reserved=$1", false)
 	if err != nil {
 		return []Seats{}, err
 	}
@@ -61,7 +60,7 @@ func (r *SeatsRepository) GetFreeSeats(ctx context.Context) ([]Seats, error) {
 	var seats []Seats
 
 	for rows.Next() {
-		err = rows.Scan(&s.Id, &s.Number, &s.Row, &s.Is_reserved)
+		err = rows.Scan(&s.Number, &s.Row, &s.Is_reserved)
 		if err != nil {
 			return []Seats{}, err
 		}
@@ -75,7 +74,7 @@ func (r *SeatsRepository) GetFreeSeats(ctx context.Context) ([]Seats, error) {
 
 func (r *SeatsRepository) GetReservedSeats(ctx context.Context) ([]Seats, error) {
 	rows, err := r.pool.Query(ctx,
-		"SELECT id, number, row, is_reserved FROM seats WHERE is_reserved=$1", true)
+		"SELECT number, row, is_reserved FROM seats WHERE is_reserved=$1", true)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +84,7 @@ func (r *SeatsRepository) GetReservedSeats(ctx context.Context) ([]Seats, error)
 
 	for rows.Next() {
 		var s Seats
-		err = rows.Scan(&s.Id, &s.Number, &s.Row, &s.Is_reserved)
+		err = rows.Scan(&s.Number, &s.Row, &s.Is_reserved)
 		if err != nil {
 			return nil, err
 		}

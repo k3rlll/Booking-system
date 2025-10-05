@@ -7,9 +7,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Reserve struct {
-	UserId User
-	SeatId Seats
+type Reservation struct {
+	Reservation_id int   `json:"reservation_id"`
+	UserId         User  `json:"user_id"`
+	SeatRow        Seats `json:"seat_row"`
+	SeatNumber     Seats `json:"seat_number"`
 }
 
 type ReservationRepository struct {
@@ -22,72 +24,83 @@ func NewReservationRepository(pool *pgxpool.Pool) *ReservationRepository {
 	}
 }
 
-func (r *ReservationRepository) IsReserved(ctx context.Context, seatId int) bool {
+func (r *ReservationRepository) IsReserved(ctx context.Context, seatRow int, seatNumber int) bool {
 	var reserved = false
 
-	if seatId == 0 {
+	if seatNumber == 0 || seatRow == 0 {
 		return reserved
 	}
 
 	_ = r.pool.QueryRow(ctx,
-		"SELECT is_reserved FROM seats where id=$1", seatId).
+		"SELECT is_reserved FROM seats where seatRow=$1 and seatNumber=$2", seatRow, seatNumber).
 		Scan(&reserved)
 
 	return reserved
 
 }
 
-func (r *ReservationRepository) Reserve(ctx context.Context, userId int, seatId int) error {
+func (r *ReservationRepository) Reserve(ctx context.Context, userId int, seatRow int, seatNumber int) (Reservation, error) {
 
-	if r.IsReserved(ctx, seatId) {
-		return functions.ErrReservationAlreadyExist
+	var reservation Reservation
+
+	if r.IsReserved(ctx, seatRow, seatNumber) {
+		return Reservation{}, functions.ErrReservationAlreadyExist
 	} else {
 
 		tx, err := r.pool.Begin(ctx)
 		if err != nil {
-			return err
+			return Reservation{}, err
 		}
 
 		defer tx.Rollback(ctx)
 
 		_, err = tx.Exec(ctx,
-			"INSERT INTO reservation (user_id, seat_id) VALUES ($1, $2)", userId, seatId)
+			"INSERT INTO reservation (user_id, seatRow, SeatNumber) VALUES ($1, $2)",
+			reservation.UserId, reservation.SeatRow, reservation.SeatNumber)
 		if err != nil {
-			return err
+			return Reservation{}, err
 		}
 
 		_, err = tx.Exec(ctx,
-			"UPDATE seats SET is_reserved=true WHERE id=$1", seatId)
+			"UPDATE seats SET is_reserved=true WHERE seat_row=$1 AND seat_number=$2", seatRow, seatNumber)
 		if err != nil {
-			return err
+			return Reservation{}, err
 		}
 
 		if err := tx.Commit(ctx); err != nil {
-			return err
+			return Reservation{}, err
 		}
 	}
-	return nil
+	return reservation, nil
 }
 
-func (r *ReservationRepository) DeleteReservation(ctx context.Context, userId int, seatId int) error {
+func (r *ReservationRepository) DeleteReservation(ctx context.Context, user_id int, seatRow int, seatNumber int) error {
+	var check_id int
+
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 
 	defer tx.Rollback(ctx)
+	_ = tx.QueryRow(ctx,
+		"SELECT user_id FROM reservation WHERE (seat_row=$1 && seat_number=$2)", seatRow, seatNumber).Scan(check_id)
 
-	if !r.IsReserved(ctx, seatId) {
+	if check_id != user_id {
+		return functions.ErrNoPermission
+	}
+
+	if !r.IsReserved(ctx, seatRow, seatNumber) {
 		return functions.ErrReservationNotFound
 	} else {
 
 		if _, err := tx.Exec(ctx,
-			"DELETE FROM reservation WHERE (user_id=$1 && seat_id=$2)", userId, seatId); err != nil {
+			"DELETE FROM reservation WHERE (seat_row=$1 && seat_number=$2)", seatRow, seatNumber); err != nil {
 			return err
 		}
 
 		if _, err = tx.Exec(ctx,
-			"UPDATE seats SET is_reserved=false where id=$1", seatId); err != nil {
+			"UPDATE seats SET is_reserved=false where seat_row=$1 and seat_number=$2", seatRow, seatNumber); err != nil {
 			return err
 		}
 

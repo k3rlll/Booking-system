@@ -43,6 +43,7 @@ func (h *Http) HandlerNewUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var u db.User
+	var u_res db.User
 
 	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
 		errDTO := functions.ErrDTO{
@@ -51,7 +52,8 @@ func (h *Http) HandlerNewUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errDTO.ToString(), http.StatusBadRequest)
 	}
 
-	if err := h.User.NewUser(ctx, u.Name, u.Email); err != nil {
+	u_res, err := h.User.NewUser(ctx, u.Name, u.Email)
+	if err != nil {
 		errDTO := functions.ErrDTO{
 			Error: err,
 			Time:  time.Now(),
@@ -66,16 +68,16 @@ func (h *Http) HandlerNewUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ID, err := h.User.GetUserID(ctx, u.Email)
-	if err != nil {
-		errDTO := functions.ErrDTO{
-			Error: err,
-			Time:  time.Now(),
-		}
-		http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
-	}
+	// ID, err := h.User.GetUserID(ctx, u.Email)
+	// if err != nil {
+	// 	errDTO := functions.ErrDTO{
+	// 		Error: err,
+	// 		Time:  time.Now(),
+	// 	}
+	// 	http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
+	// }
 
-	b, err := json.Marshal(ID)
+	b, err := json.Marshal(u_res)
 	if err != nil {
 		panic(err)
 	}
@@ -268,9 +270,9 @@ failed:
 func (h *Http) HandlerIsReserved(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	var IdSeat int
+	var s db.Seats
 	var res bool
-	if err := json.NewDecoder(r.Body).Decode(&IdSeat); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
 		errDTO := functions.ErrDTO{
 			Error: err,
 			Time:  time.Now(),
@@ -278,11 +280,11 @@ func (h *Http) HandlerIsReserved(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
 	}
 
-	if IdSeat == 0 {
+	if s.Row == 0 || s.Number == 0 {
 		http.Error(w, functions.ErrBadRequest.Error(), http.StatusBadRequest)
 	}
 
-	res = h.Reservation.IsReserved(ctx, IdSeat)
+	res = h.Reservation.IsReserved(ctx, s.Row, s.Number)
 
 	if err := json.NewEncoder(w).Encode(res); err != nil {
 		errDTO := functions.ErrDTO{
@@ -312,7 +314,7 @@ failed:
 func (h *Http) HandlerReserve(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	var res db.Reserve
+	var res db.Reservation
 
 	if err := json.NewDecoder(r.Body).Decode(&res); err != nil {
 		errDTO := functions.ErrDTO{
@@ -322,7 +324,8 @@ func (h *Http) HandlerReserve(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errDTO.ToString(), http.StatusBadRequest)
 	}
 
-	if err := h.Reservation.Reserve(ctx, res.UserId.Id, res.SeatId.Id); err != nil {
+	result, err := h.Reservation.Reserve(ctx, res.UserId.Id, res.SeatRow.Row, res.SeatRow.Number)
+	if err != nil {
 		errDTO := functions.ErrDTO{
 			Error: err,
 			Time:  time.Now(),
@@ -332,6 +335,15 @@ func (h *Http) HandlerReserve(w http.ResponseWriter, r *http.Request) {
 		} else {
 			http.Error(w, errDTO.ToString(), http.StatusBadRequest)
 		}
+	}
+	b, err := json.Marshal(result)
+	if err != nil {
+		panic(err)
+	}
+	w.WriteHeader(http.StatusOK)
+
+	if _, err := w.Write(b); err != nil {
+		fmt.Println("failed to write http response:", err)
 	}
 }
 
@@ -351,7 +363,7 @@ failed:
 func (h *Http) HandlerDeleteReservation(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	var res db.Reserve
+	var res db.Reservation
 
 	if err := json.NewDecoder(r.Body).Decode(&res); err != nil {
 		errDTO := functions.ErrDTO{
@@ -361,7 +373,7 @@ func (h *Http) HandlerDeleteReservation(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, errDTO.ToString(), http.StatusBadRequest)
 	}
 
-	if err := h.Reservation.DeleteReservation(ctx, res.UserId.Id, res.SeatId.Id); err != nil {
+	if err := h.Reservation.DeleteReservation(ctx, res.UserId.Id, res.SeatRow.Row, res.SeatRow.Number); err != nil {
 		errDTO := functions.ErrDTO{
 			Error: err,
 			Time:  time.Now(),

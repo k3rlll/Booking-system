@@ -24,27 +24,31 @@ func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
 	}
 }
 
-func (r *UserRepository) NewUser(ctx context.Context, name string, email string) error {
+func (r *UserRepository) NewUser(ctx context.Context, name string, email string) (User, error) {
+
+	var userRes User
 
 	if name == "" {
-		return functions.ErrBadRequest
+		return User{}, functions.ErrBadRequest
 	}
 	if !strings.Contains(email, "@") {
-		return functions.ErrBadRequest
+		return User{}, functions.ErrBadRequest
 	}
 
 	tag, err := r.pool.Exec(ctx,
 		"INSERT INTO users (name, email) VALUES ($1, $2)", name, email)
 	if err != nil {
-		return err
+		return User{}, err
 	}
 
 	if tag.RowsAffected() == 0 {
-		return functions.ErrUserAlreadyCreated
+		return User{}, functions.ErrUserAlreadyCreated
 
 	}
+	_ = r.pool.QueryRow(ctx,
+		"SELECT user_id, name, email FROM users WHERE email=$1", email).Scan(&userRes.Id, &userRes.Name, &userRes.Email)
 
-	return nil
+	return userRes, nil
 }
 
 func (r *UserRepository) GetUserByID(ctx context.Context, id int) (User, error) {
@@ -56,7 +60,7 @@ func (r *UserRepository) GetUserByID(ctx context.Context, id int) (User, error) 
 	}
 
 	err := r.pool.QueryRow(ctx,
-		"SELECT id, name, email FROM users WHERE id=$1", id).Scan(&u.Name, &u.Email)
+		"SELECT user_id, name, email FROM users WHERE user_id=$1", id).Scan(&u.Name, &u.Email)
 	if err != nil {
 		return User{}, err
 	}
@@ -67,7 +71,7 @@ func (r *UserRepository) GetUserByID(ctx context.Context, id int) (User, error) 
 func (r *UserRepository) GetUserID(ctx context.Context, email string) (int, error) {
 	var ID int
 	err := r.pool.QueryRow(ctx,
-		"select id from users where email=$1", email).Scan(&ID)
+		"select user_id from users where email=$1", email).Scan(&ID)
 	if err != nil {
 		return 0, err
 	}
