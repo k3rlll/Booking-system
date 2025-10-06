@@ -7,7 +7,14 @@ import (
 	"rest_api/server"
 )
 
+// type Safe struct{
+// 	mtx sync.RWMutex
+// }
+
 func main() {
+
+	// var mtx sync.RWMutex
+
 	pool, err := db.ConnectionDB()
 	if err != nil {
 		log.Fatal(err)

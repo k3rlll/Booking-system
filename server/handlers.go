@@ -81,7 +81,7 @@ func (h *Http) HandlerNewUser(w http.ResponseWriter, r *http.Request) {
 	// 	http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
 	// }
 
-	b, err := json.Marshal(u_res)
+	b, err := json.MarshalIndent(u_res, "", "    ")
 	if err != nil {
 		panic(err)
 	}
@@ -172,15 +172,22 @@ func (h *Http) HandlerGetAllSeats(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
 	}
 
-	if err := json.NewEncoder(w).Encode(res); err != nil {
-		errDTO := functions.ErrDTO{
-			Error: err.Error(),
-			Time:  time.Now(),
-		}
-		http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
-	}
+	// if err := json.NewEncoder(w).Encode(res); err != nil {
+	// 	errDTO := functions.ErrDTO{
+	// 		Error: err.Error(),
+	// 		Time:  time.Now(),
+	// 	}
+	// 	http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
+	// }
 
+	b, err := json.MarshalIndent(res, "", "    ")
+	if err != nil {
+		panic(err)
+	}
 	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write(b); err != nil {
+		fmt.Println("failed to write response:", err)
+	}
 
 }
 
@@ -331,7 +338,7 @@ func (h *Http) HandlerReserve(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errDTO.ToString(), http.StatusBadRequest)
 	}
 
-	result, err := h.Reservation.Reserve(ctx, res.UserId.Id, res.SeatRow.Row, res.SeatRow.Number)
+	result, err := h.Reservation.Reserve(ctx, res.UserId, res.SeatRow, res.SeatNumber)
 	if err != nil {
 		errDTO := functions.ErrDTO{
 			Error: err.Error(),
@@ -343,7 +350,7 @@ func (h *Http) HandlerReserve(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, errDTO.ToString(), http.StatusBadRequest)
 		}
 	}
-	b, err := json.Marshal(result)
+	b, err := json.MarshalIndent(result, "", "    ")
 	if err != nil {
 		panic(err)
 	}
@@ -380,7 +387,7 @@ func (h *Http) HandlerDeleteReservation(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, errDTO.ToString(), http.StatusBadRequest)
 	}
 
-	if err := h.Reservation.DeleteReservation(ctx, res.UserId.Id, res.SeatRow.Row, res.SeatRow.Number); err != nil {
+	if err := h.Reservation.DeleteReservation(ctx, res.UserId, res.SeatRow, res.SeatNumber); err != nil {
 		errDTO := functions.ErrDTO{
 			Error: err.Error(),
 			Time:  time.Now(),

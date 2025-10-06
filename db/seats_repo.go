@@ -57,18 +57,18 @@ func (r *SeatsRepository) GetFreeSeats(ctx context.Context) ([]Seats, error) {
 
 	defer rows.Close()
 
-	var seats []Seats
+	var seats_free []Seats
 
 	for rows.Next() {
 		err = rows.Scan(&s.Number, &s.Row, &s.Is_reserved)
 		if err != nil {
 			return []Seats{}, err
 		}
-		seats = append(seats, s)
+		seats_free = append(seats_free, s)
 
 	}
 
-	return seats, nil
+	return seats_free, nil
 
 }
 

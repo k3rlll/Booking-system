@@ -8,10 +8,10 @@ import (
 )
 
 type Reservation struct {
-	Reservation_id int   `json:"reservation_id"`
-	UserId         User  `json:"user_id"`
-	SeatRow        Seats `json:"seat_row"`
-	SeatNumber     Seats `json:"seat_number"`
+	Reservation_id int `json:"reservation_id"`
+	UserId         int `json:"user_id"`
+	SeatRow        int `json:"seat_row"`
+	SeatNumber     int `json:"seat_number"`
 }
 
 type ReservationRepository struct {
@@ -32,7 +32,7 @@ func (r *ReservationRepository) IsReserved(ctx context.Context, seatRow int, sea
 	}
 
 	_ = r.pool.QueryRow(ctx,
-		"SELECT is_reserved FROM seats where seatRow=$1 and seatNumber=$2", seatRow, seatNumber).
+		"SELECT is_reserved FROM seats where row=$1 and number=$2", seatRow, seatNumber).
 		Scan(&reserved)
 
 	return reserved
@@ -41,7 +41,7 @@ func (r *ReservationRepository) IsReserved(ctx context.Context, seatRow int, sea
 
 func (r *ReservationRepository) Reserve(ctx context.Context, userId int, seatRow int, seatNumber int) (Reservation, error) {
 
-	var reservation Reservation
+	var res Reservation
 
 	if r.IsReserved(ctx, seatRow, seatNumber) {
 		return Reservation{}, functions.ErrReservationAlreadyExist
@@ -51,18 +51,17 @@ func (r *ReservationRepository) Reserve(ctx context.Context, userId int, seatRow
 		if err != nil {
 			return Reservation{}, err
 		}
-
 		defer tx.Rollback(ctx)
 
-		_, err = tx.Exec(ctx,
-			"INSERT INTO reservation (user_id, seatRow, SeatNumber) VALUES ($1, $2)",
-			reservation.UserId, reservation.SeatRow, reservation.SeatNumber)
+		err = tx.QueryRow(ctx,
+			"INSERT INTO reservation (user_id, seat_row, seat_number) VALUES ($1, $2, $3) RETURNING reservation_id, user_id, seat_row, seat_number",
+			userId, seatRow, seatNumber).Scan(&res.Reservation_id, &res.UserId, &res.SeatRow, &res.SeatNumber)
 		if err != nil {
 			return Reservation{}, err
 		}
 
 		_, err = tx.Exec(ctx,
-			"UPDATE seats SET is_reserved=true WHERE seat_row=$1 AND seat_number=$2", seatRow, seatNumber)
+			"UPDATE seats SET is_reserved=true WHERE row=$1 AND number=$2", seatRow, seatNumber)
 		if err != nil {
 			return Reservation{}, err
 		}
@@ -70,8 +69,11 @@ func (r *ReservationRepository) Reserve(ctx context.Context, userId int, seatRow
 		if err := tx.Commit(ctx); err != nil {
 			return Reservation{}, err
 		}
+
+		return res, nil
+
 	}
-	return reservation, nil
+
 }
 
 func (r *ReservationRepository) DeleteReservation(ctx context.Context, user_id int, seatRow int, seatNumber int) error {

@@ -9,7 +9,7 @@ import (
 
 func ConnectionDB() (*pgxpool.Pool, error) {
 
-	connStr := "postgres://postgres:252566@localhost:5432/myapp"
+	connStr := "postgres://postgres:252566@localhost:5432/postgres?sslmode=disable"
 	pool, err := pgxpool.New(context.Background(), connStr)
 	if err != nil {
 		log.Fatal(err)

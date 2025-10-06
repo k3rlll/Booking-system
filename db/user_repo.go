@@ -60,11 +60,10 @@ func (r *UserRepository) GetUserByID(ctx context.Context, id int) (User, error) 
 	}
 
 	err := r.pool.QueryRow(ctx,
-		"SELECT user_id, name, email FROM users WHERE user_id=$1", id).Scan(&u.Name, &u.Email)
+		"SELECT user_id, name, email FROM users WHERE user_id=$1", id).Scan(&u.Id, &u.Name, &u.Email)
 	if err != nil {
 		return User{}, err
 	}
-
 	return u, nil
 }
 
