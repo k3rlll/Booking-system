@@ -25,7 +25,7 @@ func (s *HTTPServer) StartServer() error {
 	router.Path("/users").Methods("GET").HandlerFunc(s.Http.HandlerGetUserByID)
 	router.Path("/seats").Methods("GET").HandlerFunc(s.Http.HandlerGetAllSeats)
 	router.Path("/seats").Methods("GET").Queries("free", "true").HandlerFunc(s.Http.HandlerGetFreeSeats)
-	router.Path("/seats").Methods("GET").Queries("free", "false").HandlerFunc(s.Http.HandlerGetFreeSeats)
+	router.Path("/seats").Methods("GET").Queries("free", "false").HandlerFunc(s.Http.HandlerGetReservedSeats)
 	router.Path("/reservation").Methods("GET").HandlerFunc(s.Http.HandlerIsReserved)
 	router.Path("/reservation").Methods("PATCH").HandlerFunc(s.Http.HandlerReserve)
 	router.Path("/reservation").Methods("DELETE").HandlerFunc(s.Http.HandlerDeleteReservation)

@@ -172,14 +172,6 @@ func (h *Http) HandlerGetAllSeats(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
 	}
 
-	// if err := json.NewEncoder(w).Encode(res); err != nil {
-	// 	errDTO := functions.ErrDTO{
-	// 		Error: err.Error(),
-	// 		Time:  time.Now(),
-	// 	}
-	// 	http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
-	// }
-
 	b, err := json.MarshalIndent(res, "", "    ")
 	if err != nil {
 		panic(err)
@@ -217,16 +209,25 @@ func (h *Http) HandlerGetFreeSeats(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
 	}
 
-	if err := json.NewEncoder(w).Encode(res); err != nil {
-		errDTO := functions.ErrDTO{
-			Error: err.Error(),
-			Time:  time.Now(),
-		}
-		http.Error(w, errDTO.ToString(), http.StatusBadRequest)
+	// if err := json.NewEncoder(w).Encode(res); err != nil {
+	// 	errDTO := functions.ErrDTO{
+	// 		Error: err.Error(),
+	// 		Time:  time.Now(),
+	// 	}
+	// 	http.Error(w, errDTO.ToString(), http.StatusBadRequest)
 
+	// }
+
+	b, err := json.MarshalIndent(res, "", "    ")
+	if err != nil {
+		panic(err)
+	}
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write(b); err != nil {
+		fmt.Println("failed to write response:", err)
 	}
 
-	w.WriteHeader(http.StatusOK)
+	// w.WriteHeader(http.StatusOK)
 }
 
 /*
@@ -243,7 +244,7 @@ failed:
   - response body: JSON with error + time
 */
 
-func (h *Http) HandlerGetReservedSeats(w http.ResponseWriter, r http.Request) {
+func (h *Http) HandlerGetReservedSeats(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	res, err := h.Seats.GetReservedSeats(ctx)
