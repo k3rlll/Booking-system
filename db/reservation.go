@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"rest_api/functions"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -76,8 +77,8 @@ func (r *ReservationRepository) Reserve(ctx context.Context, userId int, seatRow
 
 }
 
-func (r *ReservationRepository) DeleteReservation(ctx context.Context, user_id int, seatRow int, seatNumber int) error {
-	var check_id int
+func (r *ReservationRepository) DeleteReservation(ctx context.Context, reservation_id int, user_id int, seatRow int, seatNumber int) error {
+	var check_id_user int
 
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -85,27 +86,29 @@ func (r *ReservationRepository) DeleteReservation(ctx context.Context, user_id i
 	}
 
 	defer tx.Rollback(ctx)
-	_ = tx.QueryRow(ctx,
-		"SELECT user_id FROM reservation WHERE (seat_row=$1 && seat_number=$2)", seatRow, seatNumber).Scan(check_id)
 
-	if check_id != user_id {
-		return functions.ErrNoPermission
-	}
+	_ = tx.QueryRow(ctx,
+		"SELECT user_id FROM reservation WHERE (seat_row=$1 AND seat_number=$2)", seatRow, seatNumber).Scan(&check_id_user)
 
 	if !r.IsReserved(ctx, seatRow, seatNumber) {
 		return functions.ErrReservationNotFound
 	} else {
 
 		if _, err := tx.Exec(ctx,
-			"DELETE FROM reservation WHERE (seat_row=$1 && seat_number=$2)", seatRow, seatNumber); err != nil {
+			"DELETE FROM reservation WHERE seat_row=$1 AND seat_number=$2", seatRow, seatNumber); err != nil {
+			fmt.Println(err)
 			return err
 		}
 
 		if _, err = tx.Exec(ctx,
-			"UPDATE seats SET is_reserved=false where seat_row=$1 and seat_number=$2", seatRow, seatNumber); err != nil {
+			"UPDATE seats SET is_reserved=false where row=$1 and number=$2", seatRow, seatNumber); err != nil {
+			fmt.Println(err)
 			return err
 		}
 
+	}
+	if check_id_user != user_id {
+		return functions.ErrNoPermission
 	}
 
 	if err := tx.Commit(ctx); err != nil {

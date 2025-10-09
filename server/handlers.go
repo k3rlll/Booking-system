@@ -207,25 +207,19 @@ func (h *Http) HandlerGetFreeSeats(w http.ResponseWriter, r *http.Request) {
 			Time:  time.Now(),
 		}
 		http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
+		return
 	}
-
-	// if err := json.NewEncoder(w).Encode(res); err != nil {
-	// 	errDTO := functions.ErrDTO{
-	// 		Error: err.Error(),
-	// 		Time:  time.Now(),
-	// 	}
-	// 	http.Error(w, errDTO.ToString(), http.StatusBadRequest)
-
-	// }
 
 	b, err := json.MarshalIndent(res, "", "    ")
 	if err != nil {
 		panic(err)
 	}
-	w.WriteHeader(http.StatusOK)
+
 	if _, err := w.Write(b); err != nil {
 		fmt.Println("failed to write response:", err)
+		return
 	}
+	w.WriteHeader(http.StatusOK)
 
 	// w.WriteHeader(http.StatusOK)
 }
@@ -254,15 +248,16 @@ func (h *Http) HandlerGetReservedSeats(w http.ResponseWriter, r *http.Request) {
 			Time:  time.Now(),
 		}
 		http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
+		return
 	}
 
-	if err := json.NewEncoder(w).Encode(res); err != nil {
-		errDTO := functions.ErrDTO{
-			Error: err.Error(),
-			Time:  time.Now(),
-		}
-		http.Error(w, errDTO.ToString(), http.StatusBadRequest)
-
+	b, err := json.MarshalIndent(res, "", "    ")
+	if err != nil {
+		panic(err)
+	}
+	if _, err := w.Write(b); err != nil {
+		fmt.Println("failed to write response:", err)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -293,10 +288,12 @@ func (h *Http) HandlerIsReserved(w http.ResponseWriter, r *http.Request) {
 			Time:  time.Now(),
 		}
 		http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
+		return
 	}
 
 	if s.Row == 0 || s.Number == 0 {
 		http.Error(w, functions.ErrBadRequest.Error(), http.StatusBadRequest)
+		return
 	}
 
 	res = h.Reservation.IsReserved(ctx, s.Row, s.Number)
@@ -307,6 +304,7 @@ func (h *Http) HandlerIsReserved(w http.ResponseWriter, r *http.Request) {
 			Time:  time.Now(),
 		}
 		http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -386,17 +384,25 @@ func (h *Http) HandlerDeleteReservation(w http.ResponseWriter, r *http.Request) 
 			Time:  time.Now(),
 		}
 		http.Error(w, errDTO.ToString(), http.StatusBadRequest)
+		return
 	}
 
-	if err := h.Reservation.DeleteReservation(ctx, res.UserId, res.SeatRow, res.SeatNumber); err != nil {
+	if err := h.Reservation.DeleteReservation(ctx, res.Reservation_id, res.UserId, res.SeatRow, res.SeatNumber); err != nil {
 		errDTO := functions.ErrDTO{
 			Error: err.Error(),
 			Time:  time.Now(),
 		}
 		if errors.Is(err, functions.ErrReservationNotFound) {
 			http.Error(w, errDTO.ToString(), http.StatusNotFound)
+			return
+		} else if errors.Is(err, functions.ErrNoPermission) {
+			http.Error(w, errDTO.ToString(), http.StatusForbidden)
+			return
 		} else {
 			http.Error(w, errDTO.ToString(), http.StatusBadRequest)
+			return
 		}
 	}
+
+	w.WriteHeader(http.StatusAccepted)
 }

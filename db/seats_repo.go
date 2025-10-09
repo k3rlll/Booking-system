@@ -49,7 +49,7 @@ func (r *SeatsRepository) GetAllSeats(ctx context.Context) ([]Seats, error) {
 
 func (r *SeatsRepository) GetFreeSeats(ctx context.Context) ([]Seats, error) {
 	rows, err := r.pool.Query(ctx,
-		"SELECT * FROM seats WHERE is_reserved=FALSE")
+		"SELECT number, row, is_reserved FROM seats WHERE is_reserved=FALSE")
 	if err != nil {
 		return []Seats{}, err
 	}
@@ -82,7 +82,6 @@ func (r *SeatsRepository) GetReservedSeats(ctx context.Context) ([]Seats, error)
 	defer rows.Close()
 
 	var reservedSeats []Seats
-
 	for rows.Next() {
 		var s Seats
 		err := rows.Scan(&s.Number, &s.Row, &s.Is_reserved)
